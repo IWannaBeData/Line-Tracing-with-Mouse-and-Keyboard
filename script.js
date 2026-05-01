@@ -12,6 +12,7 @@ let trace = [];
 let drawing = false;
 let startedAt = 0;
 let cursor = null;
+let rafId = null;
 
 function createStraightGuide(points = 600) {
   const y = canvas.height / 2;
@@ -67,6 +68,14 @@ function render() {
   drawCursor();
 }
 
+function queueRender() {
+  if (rafId !== null) return;
+  rafId = requestAnimationFrame(() => {
+    rafId = null;
+    render();
+  });
+}
+
 function resetMetrics() {
   accuracyEl.textContent = '0%';
   timeTakenEl.textContent = '0.00s';
@@ -97,9 +106,11 @@ function pointerPos(e) {
 canvas.addEventListener('pointerdown', e => {
   drawing = true;
   canvas.setPointerCapture(e.pointerId);
-  trace = [pointerPos(e)];
+  const p = pointerPos(e);
+  trace = [p];
+  cursor = p;
   startedAt = performance.now();
-  render();
+  queueRender();
   updateMetrics();
 });
 
@@ -109,17 +120,28 @@ canvas.addEventListener('pointermove', e => {
     trace.push(cursor);
     updateMetrics();
   }
-  render();
+  queueRender();
 });
 
-canvas.addEventListener('pointerup', () => {
+canvas.addEventListener('pointerup', e => {
+  if (canvas.hasPointerCapture(e.pointerId)) {
+    canvas.releasePointerCapture(e.pointerId);
+  }
+  drawing = false;
+  updateMetrics();
+});
+
+canvas.addEventListener('pointercancel', e => {
+  if (canvas.hasPointerCapture(e.pointerId)) {
+    canvas.releasePointerCapture(e.pointerId);
+  }
   drawing = false;
   updateMetrics();
 });
 
 canvas.addEventListener('pointerleave', () => {
   cursor = null;
-  render();
+  queueRender();
 });
 
 function resetTest() {
@@ -128,7 +150,7 @@ function resetTest() {
   startedAt = 0;
   cursor = null;
   resetMetrics();
-  render();
+  queueRender();
 }
 
 startBtn.addEventListener('click', resetTest);
@@ -136,7 +158,7 @@ clearBtn.addEventListener('click', () => {
   trace = [];
   startedAt = 0;
   resetMetrics();
-  render();
+  queueRender();
 });
 
 resetTest();

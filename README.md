@@ -39,5 +39,11 @@ Then open `http://localhost:8080`.
 
 1. Push this repository to GitHub.
 2. In GitHub, open **Settings → Pages**.
-3. Set source to **Deploy from a branch** and select your default branch with `/root`.
+3. Set source to **Deploy from a branch** and select the **main** branch with `/root`.
 4. Save and use the generated Pages URL.
+
+
+## Troubleshooting
+
+- If drawing seems unresponsive, click **Start Test** first to reset the guide and state.
+- The app supports mouse, touch, and stylus via Pointer Events; ensure JavaScript is enabled in your browser.
