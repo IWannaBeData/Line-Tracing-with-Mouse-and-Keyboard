@@ -18,6 +18,41 @@ let timerRunning = false;
 let timerRafId = null;
 let elapsedMs = 0;
 
+let currentTrial = 1;
+let totalTrials = 5;
+let trialAccuracies = [];
+let testFinished = false;
+
+const app = document.querySelector('.app');
+const header = document.querySelector('header');
+const controls = document.querySelector('.controls');
+const stats = document.querySelector('.stats');
+const notes = document.querySelector('.notes');
+
+if (controls) controls.style.display = 'none';
+if (stats) stats.style.display = 'none';
+if (notes) notes.style.display = 'none';
+
+const trialStatus = document.createElement('div');
+trialStatus.id = 'trialStatus';
+
+const finalResults = document.createElement('section');
+finalResults.id = 'finalResults';
+finalResults.style.display = 'none';
+
+if (header) {
+  header.innerHTML = `
+    <h1 id="trialCounter">Trial 1/5</h1>
+    <p>The test will start when you start tracing.</p>
+    <p>Take as long as you need. This is a measure of accuracy.</p>
+  `;
+  header.appendChild(trialStatus);
+}
+
+if (app) {
+  app.appendChild(finalResults);
+}
+
 function createStraightGuide(points = 600) {
   const y = canvas.height / 2;
   const startX = 80;
@@ -67,12 +102,12 @@ function drawPath(points, style, width, dotted = false) {
 }
 
 function drawCursor() {
-  if (!cursor) return;
+  if (!cursor || testFinished) return;
 
   ctx.save();
   ctx.fillStyle = '#ff0000';
   ctx.beginPath();
-  ctx.arc(cursor.x, cursor.y, 6, 0, Math.PI * 2);
+  ctx.arc(cursor.x, cursor.y, 3, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 }
@@ -80,13 +115,15 @@ function drawCursor() {
 function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  drawPath(guide, '#8f8f8f', 4, true);
+  if (!testFinished) {
+    drawPath(guide, '#8f8f8f', 2, true);
 
-  if (trace.length > 1) {
-    drawPath(trace, '#ff5a36', 4);
+    if (trace.length > 1) {
+      drawPath(trace, '#ff5a36', 2);
+    }
+
+    drawCursor();
   }
-
-  drawCursor();
 }
 
 function queueRender() {
@@ -146,20 +183,21 @@ function resetTimer() {
   setTimeDisplay(0);
 }
 
-function resetMetrics() {
-  accuracyEl.textContent = '0%';
-  progressEl.textContent = '0%';
-
-  resetTimer();
-}
-
-function updateMetrics() {
-  if (trace.length < 2) return;
+function calculateAccuracy() {
+  if (trace.length < 2) return 0;
 
   const meanDist =
     trace.reduce((sum, p) => sum + nearestDistance(p, guide), 0) / trace.length;
 
   const accuracy = Math.max(0, 100 - (meanDist / 35) * 100);
+
+  return accuracy;
+}
+
+function updateHiddenMetrics() {
+  if (trace.length < 2) return;
+
+  const accuracy = calculateAccuracy();
 
   const covered =
     guide.filter(g => nearestDistance(g, trace) < 14).length / guide.length;
@@ -177,7 +215,100 @@ function pointerPos(e) {
   };
 }
 
+function updateTrialCounter() {
+  const trialCounter = document.getElementById('trialCounter');
+
+  if (trialCounter) {
+    trialCounter.textContent = `Trial ${currentTrial}/${totalTrials}`;
+  }
+
+  trialStatus.textContent = '';
+}
+
+function prepareTrial() {
+  guide = createStraightGuide();
+  trace = [];
+  drawing = false;
+  cursor = null;
+  testFinished = false;
+
+  resetTimer();
+  updateTrialCounter();
+  queueRender();
+}
+
+function finishTrial() {
+  const accuracy = calculateAccuracy();
+  trialAccuracies.push(accuracy);
+
+  trace = [];
+  cursor = null;
+  queueRender();
+
+  if (currentTrial >= totalTrials) {
+    finishTest();
+    return;
+  }
+
+  currentTrial += 1;
+  trialStatus.textContent = 'Next line starting...';
+
+  setTimeout(() => {
+    prepareTrial();
+  }, 700);
+}
+
+function finishTest() {
+  testFinished = true;
+  drawing = false;
+  trace = [];
+  guide = [];
+  cursor = null;
+
+  stopTimer();
+  queueRender();
+
+  const trialCounter = document.getElementById('trialCounter');
+
+  if (trialCounter) {
+    trialCounter.textContent = 'Test complete';
+  }
+
+  trialStatus.textContent = '';
+
+  finalResults.style.display = 'block';
+
+  finalResults.innerHTML = `
+    <h2>Accuracy Results</h2>
+    <ol>
+      ${trialAccuracies
+        .map((score, index) => `<li>Trial ${index + 1}: ${score.toFixed(1)}%</li>`)
+        .join('')}
+    </ol>
+    <button id="restartTestBtn">Restart Test</button>
+  `;
+
+  const restartTestBtn = document.getElementById('restartTestBtn');
+
+  restartTestBtn.addEventListener('click', () => {
+    resetFullTest();
+  });
+}
+
+function resetFullTest() {
+  currentTrial = 1;
+  trialAccuracies = [];
+  testFinished = false;
+
+  finalResults.style.display = 'none';
+  finalResults.innerHTML = '';
+
+  prepareTrial();
+}
+
 canvas.addEventListener('pointerdown', e => {
+  if (testFinished) return;
+
   drawing = true;
   canvas.setPointerCapture(e.pointerId);
 
@@ -186,19 +317,18 @@ canvas.addEventListener('pointerdown', e => {
   trace = [p];
   cursor = p;
 
-  accuracyEl.textContent = '0%';
-  progressEl.textContent = '0%';
-
   startTimer();
   queueRender();
 });
 
 canvas.addEventListener('pointermove', e => {
+  if (testFinished) return;
+
   cursor = pointerPos(e);
 
   if (drawing) {
     trace.push(cursor);
-    updateMetrics();
+    updateHiddenMetrics();
   }
 
   queueRender();
@@ -209,13 +339,13 @@ function endStroke(e) {
     canvas.releasePointerCapture(e.pointerId);
   }
 
-  if (!drawing) return;
+  if (!drawing || testFinished) return;
 
   drawing = false;
 
   stopTimer();
-  updateMetrics();
-  queueRender();
+  updateHiddenMetrics();
+  finishTrial();
 }
 
 canvas.addEventListener('pointerup', endStroke);
@@ -228,17 +358,12 @@ canvas.addEventListener('pointerleave', () => {
   }
 });
 
-function resetTest() {
-  guide = createStraightGuide();
-  trace = [];
-  drawing = false;
-  cursor = null;
-
-  resetMetrics();
-  queueRender();
+if (startBtn) {
+  startBtn.addEventListener('click', resetFullTest);
 }
 
-startBtn.addEventListener('click', resetTest);
-clearBtn.addEventListener('click', resetTest);
+if (clearBtn) {
+  clearBtn.addEventListener('click', resetFullTest);
+}
 
-resetTest();
+resetFullTest();
