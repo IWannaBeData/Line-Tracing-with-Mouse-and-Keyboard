@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trace Lab - Mouse Control Benchmark</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app">
+    <header>
+      <h1>Trace Lab</h1>
+      <p>Trace each guide as accurately and smoothly as you can.</p>
+    </header>
+
+    <section class="controls">
+      <label for="shapeSelect">Pattern</label>
+      <select id="shapeSelect"></select>
+      <button id="startBtn">Start Test</button>
+      <button id="clearBtn">Clear Stroke</button>
+    </section>
+
+    <section class="stats">
+      <article><h2>Accuracy</h2><p id="accuracy">0%</p></article>
+      <article><h2>Smoothness</h2><p id="smoothness">0%</p></article>
+      <article><h2>Time</h2><p id="timeTaken">0.00s</p></article>
+      <article><h2>Progress</h2><p id="progress">0%</p></article>
+    </section>
+
+    <section class="canvas-wrap">
+      <canvas id="traceCanvas" width="1000" height="600" aria-label="Tracing canvas"></canvas>
+    </section>
+
+    <section class="notes">
+      <h3>Scoring</h3>
+      <ul>
+        <li><strong>Accuracy:</strong> Average distance from your stroke to the target path.</li>
+        <li><strong>Smoothness:</strong> Penalizes abrupt direction changes and jitter.</li>
+        <li><strong>Time:</strong> Seconds from first movement to completion.</li>
+      </ul>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
