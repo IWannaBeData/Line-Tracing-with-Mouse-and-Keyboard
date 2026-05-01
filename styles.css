@@ -1,12 +1,9 @@
 :root {
-  color-scheme: light dark;
   --bg: #f3f6fb;
   --panel: #ffffff;
   --text: #152238;
   --muted: #53627a;
   --accent: #2962ff;
-  --guide: #5f6470;
-  --trace: #ff5a36;
 }
 
 body {
@@ -17,17 +14,13 @@ body {
 }
 
 .app {
-  max-width: 1100px;
+  max-width: 1050px;
   margin: 0 auto;
   padding: 1.25rem;
 }
 
-header h1 {
-  margin-bottom: 0.2rem;
-}
-
-header p {
-  margin-top: 0;
+.instruction {
+  font-size: 1.1rem;
   color: var(--muted);
 }
 
@@ -35,22 +28,16 @@ header p {
   display: flex;
   gap: 0.65rem;
   align-items: center;
-  flex-wrap: wrap;
   margin-bottom: 1rem;
 }
 
-button,
-select {
-  border-radius: 10px;
-  border: 1px solid #b6c3d6;
-  padding: 0.55rem 0.8rem;
-  font: inherit;
-}
-
 button {
+  border-radius: 10px;
+  border: none;
+  padding: 0.55rem 0.85rem;
+  font: inherit;
   background: var(--accent);
   color: #fff;
-  border: none;
   cursor: pointer;
 }
 
@@ -60,7 +47,7 @@ button:last-child {
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  grid-template-columns: repeat(3, minmax(120px, 1fr));
   gap: 0.75rem;
 }
 
@@ -68,27 +55,16 @@ button:last-child {
   background: var(--panel);
   border-radius: 12px;
   padding: 0.75rem;
-  box-shadow: 0 2px 9px rgb(0 0 0 / 0.08);
 }
 
-.stats h2 {
-  font-size: 0.95rem;
-  margin: 0 0 0.45rem;
-  color: var(--muted);
-}
-
-.stats p {
-  margin: 0;
-  font-size: 1.4rem;
-  font-weight: 700;
-}
+.stats h2 { margin: 0; color: var(--muted); font-size: 0.95rem; }
+.stats p { margin: 0.35rem 0 0; font-weight: 700; font-size: 1.4rem; }
 
 .canvas-wrap {
   margin-top: 1rem;
   background: var(--panel);
   border-radius: 12px;
   padding: 0.6rem;
-  box-shadow: 0 2px 9px rgb(0 0 0 / 0.08);
 }
 
 canvas {
@@ -97,8 +73,7 @@ canvas {
   border: 2px dashed #adb6c3;
   border-radius: 10px;
   touch-action: none;
+  cursor: none;
 }
 
-.notes {
-  color: var(--muted);
-}
+.notes { color: var(--muted); }

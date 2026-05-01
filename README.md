@@ -1,40 +1,43 @@
 # Line Tracing with Mouse and Keyboard
 
-A browser-based tracing benchmark that measures mouse control while following guide shapes.
+A browser-based tracing benchmark focused on one task: tracing a **straight grey dotted line** as accurately as possible.
 
-## Features
+## What the page shows
 
-- Multiple trace templates (sine wave, square wave, loops, zig-zag).
-- Live metrics:
-  - **Accuracy** (distance to target path).
-  - **Smoothness** (jitter / direction-change penalty).
-  - **Time-to-finish**.
-  - **Progress** (% of path covered).
-- Simple static site, ready for GitHub Pages.
+- Instruction text: **"Trace the line as accurately as possible."**
+- A drawing canvas with a horizontal grey dotted guide line.
+- A red cursor indicator on the canvas.
+- Live metrics for:
+  - **Accuracy**
+  - **Progress**
+  - **Time**
+
+## Accuracy documentation
+
+Accuracy is calculated as follows:
+
+1. While drawing, the app samples points from your red stroke.
+2. For each sampled stroke point, it finds the nearest point on the grey guide line.
+3. It computes the mean of those nearest-point distances.
+4. It maps that mean distance to a percentage score from `0` to `100`:
+
+```text
+accuracy = max(0, 100 - (mean_distance / 35) * 100)
+```
+
+Lower average distance error yields a higher accuracy score.
 
 ## Run locally
-
-Open `index.html` directly, or use a local server:
 
 ```bash
 python3 -m http.server 8080
 ```
 
-Then visit `http://localhost:8080`.
+Then open `http://localhost:8080`.
 
 ## Publish on GitHub Pages
 
 1. Push this repository to GitHub.
-2. Go to **Settings → Pages**.
-3. Under **Build and deployment**, choose:
-   - **Source:** Deploy from a branch
-   - **Branch:** `main` (or your default branch), folder `/root`
-4. Save and wait for the Pages URL.
-
-## Notes on scoring
-
-- Accuracy is normalized so closer traces score higher.
-- Smoothness penalizes frequent angle changes between consecutive movement segments.
-- Time starts on first pointer-down and updates while tracing.
-
-You can tune scoring thresholds in `script.js` to calibrate difficulty.
+2. In GitHub, open **Settings → Pages**.
+3. Set source to **Deploy from a branch** and select your default branch with `/root`.
+4. Save and use the generated Pages URL.
