@@ -20,8 +20,15 @@ let elapsedMs = 0;
 
 let currentTrial = 1;
 let totalTrials = 5;
-let trialAccuracies = [];
+let trialResults = [];
 let testFinished = false;
+
+// Visual/scoring settings
+const GUIDE_LINE_WIDTH = 1;
+const TRACE_LINE_WIDTH = 1;
+const CURSOR_RADIUS = 2;
+const ACCURACY_TOLERANCE_PX = 18;
+const COVERAGE_THRESHOLD_PX = 8;
 
 const app = document.querySelector('.app');
 const header = document.querySelector('header');
@@ -88,7 +95,7 @@ function drawPath(points, style, width, dotted = false) {
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
 
-  if (dotted) ctx.setLineDash([2, 10]);
+  if (dotted) ctx.setLineDash([2, 8]);
 
   ctx.beginPath();
   ctx.moveTo(points[0].x, points[0].y);
@@ -107,7 +114,7 @@ function drawCursor() {
   ctx.save();
   ctx.fillStyle = '#ff0000';
   ctx.beginPath();
-  ctx.arc(cursor.x, cursor.y, 3, 0, Math.PI * 2);
+  ctx.arc(cursor.x, cursor.y, CURSOR_RADIUS, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 }
@@ -116,10 +123,10 @@ function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   if (!testFinished) {
-    drawPath(guide, '#8f8f8f', 2, true);
+    drawPath(guide, '#8f8f8f', GUIDE_LINE_WIDTH, true);
 
     if (trace.length > 1) {
-      drawPath(trace, '#ff5a36', 2);
+      drawPath(trace, '#ff5a36', TRACE_LINE_WIDTH);
     }
 
     drawCursor();
@@ -189,7 +196,10 @@ function calculateAccuracy() {
   const meanDist =
     trace.reduce((sum, p) => sum + nearestDistance(p, guide), 0) / trace.length;
 
-  const accuracy = Math.max(0, 100 - (meanDist / 35) * 100);
+  const accuracy = Math.max(
+    0,
+    100 - (meanDist / ACCURACY_TOLERANCE_PX) * 100
+  );
 
   return accuracy;
 }
@@ -200,7 +210,8 @@ function updateHiddenMetrics() {
   const accuracy = calculateAccuracy();
 
   const covered =
-    guide.filter(g => nearestDistance(g, trace) < 14).length / guide.length;
+    guide.filter(g => nearestDistance(g, trace) < COVERAGE_THRESHOLD_PX).length /
+    guide.length;
 
   accuracyEl.textContent = `${accuracy.toFixed(1)}%`;
   progressEl.textContent = `${(covered * 100).toFixed(1)}%`;
@@ -239,7 +250,13 @@ function prepareTrial() {
 
 function finishTrial() {
   const accuracy = calculateAccuracy();
-  trialAccuracies.push(accuracy);
+  const timeSeconds = elapsedMs / 1000;
+
+  trialResults.push({
+    trial: currentTrial,
+    accuracy,
+    timeSeconds
+  });
 
   trace = [];
   cursor = null;
@@ -279,10 +296,13 @@ function finishTest() {
   finalResults.style.display = 'block';
 
   finalResults.innerHTML = `
-    <h2>Accuracy Results</h2>
+    <h2>Results</h2>
     <ol>
-      ${trialAccuracies
-        .map((score, index) => `<li>Trial ${index + 1}: ${score.toFixed(1)}%</li>`)
+      ${trialResults
+        .map(
+          result =>
+            `<li>Trial ${result.trial}: ${result.accuracy.toFixed(1)}% accuracy, ${result.timeSeconds.toFixed(2)}s</li>`
+        )
         .join('')}
     </ol>
     <button id="restartTestBtn">Restart Test</button>
@@ -297,7 +317,7 @@ function finishTest() {
 
 function resetFullTest() {
   currentTrial = 1;
-  trialAccuracies = [];
+  trialResults = [];
   testFinished = false;
 
   finalResults.style.display = 'none';
