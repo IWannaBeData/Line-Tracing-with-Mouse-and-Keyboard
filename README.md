@@ -11,7 +11,6 @@ A browser-based tracing benchmark focused on one task: tracing a **straight grey
   - **Accuracy**
   - **Progress**
   - **Time**
-- **Time** updates continuously while a tracing attempt is active (frame-driven), not only on pointer movement.
 
 ## Accuracy documentation
 

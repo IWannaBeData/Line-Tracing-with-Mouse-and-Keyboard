@@ -13,7 +13,6 @@ let drawing = false;
 let startedAt = 0;
 let cursor = null;
 let rafId = null;
-let timerRafId = null;
 
 function createStraightGuide(points = 600) {
   const y = canvas.height / 2;
@@ -84,36 +83,16 @@ function resetMetrics() {
 }
 
 function updateMetrics() {
-  const elapsed = startedAt ? (performance.now() - startedAt) / 1000 : 0;
-  timeTakenEl.textContent = `${elapsed.toFixed(2)}s`;
-
   if (trace.length < 2) return;
 
   const meanDist = trace.reduce((sum, p) => sum + nearestDistance(p, guide), 0) / trace.length;
   const accuracy = Math.max(0, 100 - (meanDist / 35) * 100);
   const covered = guide.filter(g => nearestDistance(g, trace) < 14).length / guide.length;
+  const elapsed = startedAt ? (performance.now() - startedAt) / 1000 : 0;
 
   accuracyEl.textContent = `${accuracy.toFixed(1)}%`;
   progressEl.textContent = `${(covered * 100).toFixed(1)}%`;
-}
-
-function startTimerLoop() {
-  if (timerRafId !== null) return;
-  const tick = () => {
-    if (!drawing) {
-      timerRafId = null;
-      return;
-    }
-    updateMetrics();
-    timerRafId = requestAnimationFrame(tick);
-  };
-  timerRafId = requestAnimationFrame(tick);
-}
-
-function stopTimerLoop() {
-  if (timerRafId === null) return;
-  cancelAnimationFrame(timerRafId);
-  timerRafId = null;
+  timeTakenEl.textContent = `${elapsed.toFixed(2)}s`;
 }
 
 function pointerPos(e) {
@@ -131,7 +110,6 @@ canvas.addEventListener('pointerdown', e => {
   trace = [p];
   cursor = p;
   startedAt = performance.now();
-  startTimerLoop();
   queueRender();
   updateMetrics();
 });
@@ -150,7 +128,6 @@ canvas.addEventListener('pointerup', e => {
     canvas.releasePointerCapture(e.pointerId);
   }
   drawing = false;
-  stopTimerLoop();
   updateMetrics();
 });
 
@@ -159,7 +136,6 @@ canvas.addEventListener('pointercancel', e => {
     canvas.releasePointerCapture(e.pointerId);
   }
   drawing = false;
-  stopTimerLoop();
   updateMetrics();
 });
 
@@ -173,8 +149,6 @@ function resetTest() {
   trace = [];
   startedAt = 0;
   cursor = null;
-  drawing = false;
-  stopTimerLoop();
   resetMetrics();
   queueRender();
 }
@@ -183,8 +157,6 @@ startBtn.addEventListener('click', resetTest);
 clearBtn.addEventListener('click', () => {
   trace = [];
   startedAt = 0;
-  drawing = false;
-  stopTimerLoop();
   resetMetrics();
   queueRender();
 });
