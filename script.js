@@ -18,17 +18,20 @@ let timerRunning = false;
 let timerRafId = null;
 let elapsedMs = 0;
 
-let currentTrial = 1;
-let totalTrials = 5;
-let trialResults = [];
-let testFinished = false;
+const ATTEMPTS_PER_SHAPE = 5;
 
-// Visual/scoring settings
 const GUIDE_LINE_WIDTH = 1;
 const TRACE_LINE_WIDTH = 1;
 const CURSOR_RADIUS = 2;
+const START_DOT_RADIUS = 8;
+
 const ACCURACY_TOLERANCE_PX = 18;
 const COVERAGE_THRESHOLD_PX = 8;
+
+let currentShapeIndex = 0;
+let currentAttempt = 1;
+let results = [];
+let testFinished = false;
 
 const app = document.querySelector('.app');
 const header = document.querySelector('header');
@@ -42,14 +45,16 @@ if (notes) notes.style.display = 'none';
 
 const trialStatus = document.createElement('div');
 trialStatus.id = 'trialStatus';
+trialStatus.style.marginTop = '8px';
 
 const finalResults = document.createElement('section');
 finalResults.id = 'finalResults';
 finalResults.style.display = 'none';
+finalResults.style.marginTop = '20px';
 
 if (header) {
   header.innerHTML = `
-    <h1 id="trialCounter">Trial 1/5</h1>
+    <h1 id="trialCounter">Line 1/5</h1>
     <p>The test will start when you start tracing.</p>
     <p>Take as long as you need. This is a measure of accuracy.</p>
   `;
@@ -60,15 +65,51 @@ if (app) {
   app.appendChild(finalResults);
 }
 
-function createStraightGuide(points = 600) {
-  const y = canvas.height / 2;
-  const startX = 80;
-  const endX = canvas.width - 80;
+const SHAPES = [
+  {
+    key: 'line',
+    label: 'Line',
+    dotColor: '#f2c94c',
+    createGuide: createLineGuide
+  },
+  {
+    key: 'loop',
+    label: 'Loop',
+    dotColor: '#f2c94c',
+    createGuide: createLoopGuide
+  },
+  {
+    key: 'boxy',
+    label: 'Boxy',
+    dotColor: '#ff3333',
+    createGuide: createBoxyGuide
+  },
+  {
+    key: 'angular',
+    label: 'Angular',
+    dotColor: '#bb6bd9',
+    createGuide: createAngularGuide
+  },
+  {
+    key: 'underloop',
+    label: 'Underloop',
+    dotColor: '#0f52ba',
+    createGuide: createUnderloopGuide
+  },
+  {
+    key: 'wavy',
+    label: 'Wavy',
+    dotColor: '#00c853',
+    createGuide: createWavyGuide
+  }
+];
 
-  return Array.from({ length: points }, (_, i) => ({
-    x: startX + ((endX - startX) * i) / (points - 1),
-    y
-  }));
+function currentShape() {
+  return SHAPES[currentShapeIndex];
+}
+
+function formatResultName(shapeKey, attempt) {
+  return `${shapeKey} ${attempt}`;
 }
 
 function dist(a, b) {
@@ -86,6 +127,163 @@ function nearestDistance(point, arr) {
   return best;
 }
 
+function addLineSegment(points, x1, y1, x2, y2, steps = 40) {
+  const startIndex = points.length ? 1 : 0;
+
+  for (let i = startIndex; i <= steps; i++) {
+    const t = i / steps;
+    points.push({
+      x: x1 + (x2 - x1) * t,
+      y: y1 + (y2 - y1) * t
+    });
+  }
+}
+
+function addArc(points, cx, cy, r, startAngle, endAngle, steps = 60) {
+  const startIndex = points.length ? 1 : 0;
+
+  for (let i = startIndex; i <= steps; i++) {
+    const t = i / steps;
+    const angle = startAngle + (endAngle - startAngle) * t;
+    points.push({
+      x: cx + r * Math.cos(angle),
+      y: cy + r * Math.sin(angle)
+    });
+  }
+}
+
+function createLineGuide(pointsCount = 500) {
+  const y = canvas.height / 2;
+  const startX = 120;
+  const endX = canvas.width - 80;
+  const points = [];
+
+  for (let i = 0; i < pointsCount; i++) {
+    const t = i / (pointsCount - 1);
+    points.push({
+      x: startX + (endX - startX) * t,
+      y
+    });
+  }
+
+  return points;
+}
+
+function createLoopGuide(pointsCount = 900) {
+  const points = [];
+  const startX = 140;
+  const baselineY = canvas.height / 2 + 20;
+  const totalWidth = canvas.width - 220;
+  const loops = 5;
+  const tStart = -Math.PI / 2;
+  const tEnd = loops * 2 * Math.PI - Math.PI / 2;
+  const ampX = 26;
+  const ampY = 55;
+
+  for (let i = 0; i < pointsCount; i++) {
+    const u = i / (pointsCount - 1);
+    const t = tStart + (tEnd - tStart) * u;
+
+    points.push({
+      x: startX + totalWidth * u + ampX * Math.sin(t),
+      y: baselineY - ampY * Math.cos(t)
+    });
+  }
+
+  return points;
+}
+
+function createBoxyGuide() {
+  const points = [];
+  const startX = 120;
+  const topY = canvas.height / 2 - 55;
+  const bottomY = canvas.height / 2 + 15;
+  const unit = 90;
+
+  let x = startX;
+  let y = bottomY;
+
+  addLineSegment(points, x, y, x, topY, 30);
+  y = topY;
+
+  for (let i = 0; i < 4; i++) {
+    addLineSegment(points, x, y, x + unit, y, 30);
+    x += unit;
+
+    addLineSegment(points, x, y, x, bottomY, 24);
+    y = bottomY;
+
+    addLineSegment(points, x, y, x + unit, y, 30);
+    x += unit;
+
+    addLineSegment(points, x, y, x, topY, 24);
+    y = topY;
+  }
+
+  addLineSegment(points, x, y, x + unit, y, 30);
+
+  return points;
+}
+
+function createAngularGuide() {
+  const points = [];
+  const startX = 120;
+  const midY = canvas.height / 2;
+  const topY = midY - 70;
+  const bottomY = midY + 70;
+  const stepX = 95;
+
+  let x = startX;
+  let goingDown = true;
+
+  for (let i = 0; i < 8; i++) {
+    const nextX = x + stepX;
+    const nextY = goingDown ? bottomY : topY;
+
+    addLineSegment(points, x, goingDown ? topY : bottomY, nextX, nextY, 28);
+    x = nextX;
+    goingDown = !goingDown;
+  }
+
+  return points;
+}
+
+function createUnderloopGuide() {
+  const points = [];
+  const startX = 130;
+  const topY = canvas.height / 2 - 40;
+  const radius = 42;
+  const scallops = 5;
+  const diameter = radius * 2;
+
+  for (let i = 0; i < scallops; i++) {
+    const cx = startX + i * diameter + radius;
+    addArc(points, cx, topY, radius, Math.PI, 2 * Math.PI, 70);
+  }
+
+  return points;
+}
+
+function createWavyGuide(pointsCount = 700) {
+  const points = [];
+  const startX = 120;
+  const endX = canvas.width - 80;
+  const width = endX - startX;
+  const midY = canvas.height / 2 + 5;
+  const amplitude = 45;
+  const cycles = 2.5;
+
+  for (let i = 0; i < pointsCount; i++) {
+    const t = i / (pointsCount - 1);
+    points.push({
+      x: startX + width * t,
+      y: midY + amplitude * Math.sin(t * cycles * 2 * Math.PI + Math.PI)
+    });
+  }
+
+  return points;
+}
+
 function drawPath(points, style, width, dotted = false) {
   if (!points.length) return;
 
@@ -95,7 +293,9 @@ function drawPath(points, style, width, dotted = false) {
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
 
-  if (dotted) ctx.setLineDash([2, 8]);
+  if (dotted) {
+    ctx.setLineDash([4, 6]);
+  }
 
   ctx.beginPath();
   ctx.moveTo(points[0].x, points[0].y);
@@ -119,16 +319,31 @@ function drawCursor() {
   ctx.restore();
 }
 
+function drawStartDot() {
+  const shape = currentShape();
+  if (!guide.length || !shape || testFinished) return;
+
+  const first = guide[0];
+
+  ctx.save();
+  ctx.fillStyle = shape.dotColor;
+  ctx.beginPath();
+  ctx.arc(first.x, first.y, START_DOT_RADIUS, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
 function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   if (!testFinished) {
-    drawPath(guide, '#8f8f8f', GUIDE_LINE_WIDTH, true);
+    drawPath(guide, '#111111', GUIDE_LINE_WIDTH, true);
 
     if (trace.length > 1) {
       drawPath(trace, '#ff5a36', TRACE_LINE_WIDTH);
     }
 
+    drawStartDot();
     drawCursor();
   }
 }
@@ -143,7 +358,9 @@ function queueRender() {
 }
 
 function setTimeDisplay(ms) {
-  timeTakenEl.textContent = `${(ms / 1000).toFixed(2)}s`;
+  if (timeTakenEl) {
+    timeTakenEl.textContent = `${(ms / 1000).toFixed(2)}s`;
+  }
 }
 
 function tickTimer(now) {
@@ -161,7 +378,6 @@ function startTimer() {
   elapsedMs = 0;
   timerStart = performance.now();
   timerRunning = true;
-
   setTimeDisplay(0);
 
   timerRafId = requestAnimationFrame(tickTimer);
@@ -183,29 +399,22 @@ function stopTimer() {
 
 function resetTimer() {
   stopTimer();
-
   timerStart = 0;
   elapsedMs = 0;
-
   setTimeDisplay(0);
 }
 
 function calculateAccuracy() {
-  if (trace.length < 2) return 0;
+  if (trace.length < 2 || guide.length < 2) return 0;
 
   const meanDist =
     trace.reduce((sum, p) => sum + nearestDistance(p, guide), 0) / trace.length;
 
-  const accuracy = Math.max(
-    0,
-    100 - (meanDist / ACCURACY_TOLERANCE_PX) * 100
-  );
-
-  return accuracy;
+  return Math.max(0, 100 - (meanDist / ACCURACY_TOLERANCE_PX) * 100);
 }
 
 function updateHiddenMetrics() {
-  if (trace.length < 2) return;
+  if (trace.length < 2 || guide.length < 2) return;
 
   const accuracy = calculateAccuracy();
 
@@ -213,8 +422,13 @@ function updateHiddenMetrics() {
     guide.filter(g => nearestDistance(g, trace) < COVERAGE_THRESHOLD_PX).length /
     guide.length;
 
-  accuracyEl.textContent = `${accuracy.toFixed(1)}%`;
-  progressEl.textContent = `${(covered * 100).toFixed(1)}%`;
+  if (accuracyEl) {
+    accuracyEl.textContent = `${accuracy.toFixed(1)}%`;
+  }
+
+  if (progressEl) {
+    progressEl.textContent = `${(covered * 100).toFixed(1)}%`;
+  }
 }
 
 function pointerPos(e) {
@@ -226,34 +440,58 @@ function pointerPos(e) {
   };
 }
 
-function updateTrialCounter() {
+function updateHeader() {
+  const shape = currentShape();
   const trialCounter = document.getElementById('trialCounter');
 
-  if (trialCounter) {
-    trialCounter.textContent = `Trial ${currentTrial}/${totalTrials}`;
+  if (trialCounter && shape) {
+    trialCounter.textContent = `${shape.label} ${currentAttempt}/${ATTEMPTS_PER_SHAPE}`;
   }
 
   trialStatus.textContent = '';
 }
 
-function prepareTrial() {
-  guide = createStraightGuide();
+function prepareAttempt() {
+  const shape = currentShape();
+
+  if (!shape) return;
+
+  guide = shape.createGuide();
   trace = [];
   drawing = false;
   cursor = null;
   testFinished = false;
 
   resetTimer();
-  updateTrialCounter();
+  updateHeader();
   queueRender();
 }
 
-function finishTrial() {
+function advanceToNextAttempt() {
+  if (currentAttempt < ATTEMPTS_PER_SHAPE) {
+    currentAttempt += 1;
+    prepareAttempt();
+    return;
+  }
+
+  if (currentShapeIndex < SHAPES.length - 1) {
+    currentShapeIndex += 1;
+    currentAttempt = 1;
+    prepareAttempt();
+    return;
+  }
+
+  finishTest();
+}
+
+function finishAttempt() {
+  const shape = currentShape();
   const accuracy = calculateAccuracy();
   const timeSeconds = elapsedMs / 1000;
+  const resultName = formatResultName(shape.key, currentAttempt);
 
-  trialResults.push({
-    trial: currentTrial,
+  results.push({
+    name: resultName,
     accuracy,
     timeSeconds
   });
@@ -262,17 +500,33 @@ function finishTrial() {
   cursor = null;
   queueRender();
 
-  if (currentTrial >= totalTrials) {
-    finishTest();
-    return;
+  if (
+    currentAttempt === ATTEMPTS_PER_SHAPE &&
+    currentShapeIndex < SHAPES.length - 1
+  ) {
+    const nextShape = SHAPES[currentShapeIndex + 1];
+    trialStatus.textContent = `Next: ${nextShape.label} 1/${ATTEMPTS_PER_SHAPE}`;
+  } else if (
+    currentAttempt < ATTEMPTS_PER_SHAPE
+  ) {
+    trialStatus.textContent = `Next: ${shape.label} ${currentAttempt + 1}/${ATTEMPTS_PER_SHAPE}`;
   }
 
-  currentTrial += 1;
-  trialStatus.textContent = 'Next line starting...';
-
   setTimeout(() => {
-    prepareTrial();
+    advanceToNextAttempt();
   }, 700);
+}
+
+function buildResultsTSV() {
+  const lines = ['name\taccuracy_percent\ttime_seconds'];
+
+  results.forEach(result => {
+    lines.push(
+      `${result.name}\t${result.accuracy.toFixed(1)}\t${result.timeSeconds.toFixed(2)}`
+    );
+  });
+
+  return lines.join('\n');
 }
 
 function finishTest() {
@@ -286,29 +540,40 @@ function finishTest() {
   queueRender();
 
   const trialCounter = document.getElementById('trialCounter');
-
   if (trialCounter) {
-    trialCounter.textContent = 'Test complete';
+    trialCounter.textContent = 'All tests complete';
   }
 
   trialStatus.textContent = '';
 
-  finalResults.style.display = 'block';
+  const tsv = buildResultsTSV();
 
+  finalResults.style.display = 'block';
   finalResults.innerHTML = `
     <h2>Results</h2>
-    <ol>
-      ${trialResults
-        .map(
-          result =>
-            `<li>Trial ${result.trial}: ${result.accuracy.toFixed(1)}% accuracy, ${result.timeSeconds.toFixed(2)}s</li>`
-        )
-        .join('')}
-    </ol>
-    <button id="restartTestBtn">Restart Test</button>
+    <p>Copy and paste this directly into Excel:</p>
+    <textarea id="resultsText" rows="20" style="width: 100%; box-sizing: border-box;" readonly>${tsv}</textarea>
+    <div style="margin-top: 12px;">
+      <button id="copyResultsBtn">Copy Results</button>
+      <button id="restartTestBtn">Restart Test</button>
+    </div>
   `;
 
+  const copyResultsBtn = document.getElementById('copyResultsBtn');
   const restartTestBtn = document.getElementById('restartTestBtn');
+  const resultsText = document.getElementById('resultsText');
+
+  copyResultsBtn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(tsv);
+      copyResultsBtn.textContent = 'Copied!';
+      setTimeout(() => {
+        copyResultsBtn.textContent = 'Copy Results';
+      }, 1200);
+    } catch (err) {
+      resultsText.select();
+    }
+  });
 
   restartTestBtn.addEventListener('click', () => {
     resetFullTest();
@@ -316,14 +581,15 @@ function finishTest() {
 }
 
 function resetFullTest() {
-  currentTrial = 1;
-  trialResults = [];
+  currentShapeIndex = 0;
+  currentAttempt = 1;
+  results = [];
   testFinished = false;
 
   finalResults.style.display = 'none';
   finalResults.innerHTML = '';
 
-  prepareTrial();
+  prepareAttempt();
 }
 
 canvas.addEventListener('pointerdown', e => {
@@ -333,7 +599,6 @@ canvas.addEventListener('pointerdown', e => {
   canvas.setPointerCapture(e.pointerId);
 
   const p = pointerPos(e);
-
   trace = [p];
   cursor = p;
 
@@ -362,10 +627,9 @@ function endStroke(e) {
   if (!drawing || testFinished) return;
 
   drawing = false;
-
   stopTimer();
   updateHiddenMetrics();
-  finishTrial();
+  finishAttempt();
 }
 
 canvas.addEventListener('pointerup', endStroke);
