@@ -1,0 +1,79 @@
+:root {
+  --bg: #f3f6fb;
+  --panel: #ffffff;
+  --text: #152238;
+  --muted: #53627a;
+  --accent: #2962ff;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.app {
+  max-width: 1050px;
+  margin: 0 auto;
+  padding: 1.25rem;
+}
+
+.instruction {
+  font-size: 1.1rem;
+  color: var(--muted);
+}
+
+.controls {
+  display: flex;
+  gap: 0.65rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+button {
+  border-radius: 10px;
+  border: none;
+  padding: 0.55rem 0.85rem;
+  font: inherit;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+
+button:last-child {
+  background: #45526b;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, 1fr));
+  gap: 0.75rem;
+}
+
+.stats article {
+  background: var(--panel);
+  border-radius: 12px;
+  padding: 0.75rem;
+}
+
+.stats h2 { margin: 0; color: var(--muted); font-size: 0.95rem; }
+.stats p { margin: 0.35rem 0 0; font-weight: 700; font-size: 1.4rem; }
+
+.canvas-wrap {
+  margin-top: 1rem;
+  background: var(--panel);
+  border-radius: 12px;
+  padding: 0.6rem;
+}
+
+canvas {
+  width: 100%;
+  height: auto;
+  border: 2px dashed #adb6c3;
+  border-radius: 10px;
+  touch-action: none;
+  cursor: none;
+}
+
+.notes { color: var(--muted); }

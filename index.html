@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trace Lab - Line Accuracy Test</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app">
+    <header>
+      <h1>Trace Lab</h1>
+      <p class="instruction">Trace the line as accurately as possible.</p>
+    </header>
+
+    <section class="controls">
+      <button id="startBtn">Start Test</button>
+      <button id="clearBtn">Clear Stroke</button>
+    </section>
+
+    <section class="stats">
+      <article><h2>Accuracy</h2><p id="accuracy">0%</p></article>
+      <article><h2>Time</h2><p id="timeTaken">0.00s</p></article>
+      <article><h2>Progress</h2><p id="progress">0%</p></article>
+    </section>
+
+    <section class="canvas-wrap">
+      <canvas id="traceCanvas" width="1000" height="450" aria-label="Tracing canvas"></canvas>
+    </section>
+
+    <section class="notes">
+      <h3>How accuracy is measured</h3>
+      <p>
+        Each sampled point in your red stroke is compared to the nearest point on the grey dotted guide line.
+        The average distance error is converted to a 0-100 score where lower error means higher accuracy.
+      </p>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
