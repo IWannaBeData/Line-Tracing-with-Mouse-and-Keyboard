@@ -201,8 +201,6 @@ function createLoopGuide() {
 
     for (let i = 0; i <= steps; i++) {
       const t = i / steps;
-
-      // Starts at bottom, travels around a complete oval loop, returns to bottom.
       const angle = Math.PI / 2 + t * 2 * Math.PI;
 
       points.push({
@@ -530,9 +528,7 @@ function finishAttempt() {
   ) {
     const nextShape = SHAPES[currentShapeIndex + 1];
     trialStatus.textContent = `Next: ${nextShape.label} 1/${ATTEMPTS_PER_SHAPE}`;
-  } else if (
-    currentAttempt < ATTEMPTS_PER_SHAPE
-  ) {
+  } else if (currentAttempt < ATTEMPTS_PER_SHAPE) {
     trialStatus.textContent = `Next: ${shape.label} ${currentAttempt + 1}/${ATTEMPTS_PER_SHAPE}`;
   }
 
@@ -564,6 +560,7 @@ function finishTest() {
   queueRender();
 
   const trialCounter = document.getElementById('trialCounter');
+
   if (trialCounter) {
     trialCounter.textContent = 'All tests complete';
   }
@@ -591,6 +588,7 @@ function finishTest() {
     try {
       await navigator.clipboard.writeText(tsv);
       copyResultsBtn.textContent = 'Copied!';
+
       setTimeout(() => {
         copyResultsBtn.textContent = 'Copy Results';
       }, 1200);
