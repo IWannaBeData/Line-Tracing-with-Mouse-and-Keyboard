@@ -25,9 +25,8 @@ const TRACE_LINE_WIDTH = 1;
 const CURSOR_RADIUS = 2;
 const START_DOT_RADIUS = 8;
 
-const ACCURACY_TOLERANCE_PX = 12;
-const ACCURACY_PENALTY_MULTIPLIER = 1.5;
-const COVERAGE_THRESHOLD_PX = 6;
+const ACCURACY_TOLERANCE_PX = 18;
+const COVERAGE_THRESHOLD_PX = 8;
 
 let currentShapeIndex = 0;
 let currentAttempt = 1;
@@ -170,42 +169,28 @@ function createLineGuide(pointsCount = 500) {
   return points;
 }
 
-function createLoopGuide() {
+function createLoopGuide(pointsCount = 900) {
   const points = [];
-
+  const startX = 140;
+  const baselineY = canvas.height / 2 + 20;
+  const totalWidth = canvas.width - 220;
   const loops = 5;
-  const startX = 130;
-  const centerY = canvas.height / 2;
-  const loopWidth = 52;
-  const loopHeight = 72;
-  const spacing = 115;
+  const tStart = -Math.PI / 2;
+  const tEnd = loops * 2 * Math.PI - Math.PI / 2;
+  const ampX = 26;
+  const ampY = 55;
 
-  for (let loop = 0; loop < loops; loop++) {
-    const cx = startX + loop * spacing + loopWidth / 2;
+  for (let i = 0; i < pointsCount; i++) {
+    const u = i / (pointsCount - 1);
+    const t = tStart + (tEnd - tStart) * u;
 
-    if (loop > 0) {
-      const prevBottomX = startX + (loop - 1) * spacing + loopWidth / 2;
-      const nextBottomX = cx;
-      addLineSegment(points, prevBottomX, centerY + loopHeight / 2, nextBottomX, centerY + loopHeight / 2, 25);
-    }
-
-    const steps = 110;
-
-    for (let i = 0; i <= steps; i++) {
-      const t = i / steps;
-
-      // Starts at bottom, travels around a complete oval loop, returns to bottom.
-      const angle = Math.PI / 2 + t * 2 * Math.PI;
-
-      points.push({
-        x: cx + (loopWidth / 2) * Math.cos(angle),
-        y: centerY + (loopHeight / 2) * Math.sin(angle)
-      });
-    }
+    points.push({
+      x: startX + totalWidth * u + ampX * Math.sin(t),
+      y: baselineY - ampY * Math.cos(t)
+    });
   }
 
   return points;
-}
 }
 
 function createBoxyGuide() {
@@ -425,9 +410,7 @@ function calculateAccuracy() {
   const meanDist =
     trace.reduce((sum, p) => sum + nearestDistance(p, guide), 0) / trace.length;
 
-  const adjustedError = meanDist * ACCURACY_PENALTY_MULTIPLIER;
-
-  return Math.max(0, 100 - (adjustedError / ACCURACY_TOLERANCE_PX) * 100);
+  return Math.max(0, 100 - (meanDist / ACCURACY_TOLERANCE_PX) * 100);
 }
 
 function updateHiddenMetrics() {
