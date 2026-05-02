@@ -186,21 +186,15 @@ function createLoopGuide() {
     if (loop > 0) {
       const prevBottomX = startX + (loop - 1) * spacing + loopWidth / 2;
       const nextBottomX = cx;
-
-      addLineSegment(
-        points,
-        prevBottomX,
-        centerY + loopHeight / 2,
-        nextBottomX,
-        centerY + loopHeight / 2,
-        25
-      );
+      addLineSegment(points, prevBottomX, centerY + loopHeight / 2, nextBottomX, centerY + loopHeight / 2, 25);
     }
 
     const steps = 110;
 
     for (let i = 0; i <= steps; i++) {
       const t = i / steps;
+
+      // Starts at bottom, travels around a complete oval loop, returns to bottom.
       const angle = Math.PI / 2 + t * 2 * Math.PI;
 
       points.push({
@@ -211,6 +205,7 @@ function createLoopGuide() {
   }
 
   return points;
+}
 }
 
 function createBoxyGuide() {
@@ -528,7 +523,9 @@ function finishAttempt() {
   ) {
     const nextShape = SHAPES[currentShapeIndex + 1];
     trialStatus.textContent = `Next: ${nextShape.label} 1/${ATTEMPTS_PER_SHAPE}`;
-  } else if (currentAttempt < ATTEMPTS_PER_SHAPE) {
+  } else if (
+    currentAttempt < ATTEMPTS_PER_SHAPE
+  ) {
     trialStatus.textContent = `Next: ${shape.label} ${currentAttempt + 1}/${ATTEMPTS_PER_SHAPE}`;
   }
 
@@ -560,7 +557,6 @@ function finishTest() {
   queueRender();
 
   const trialCounter = document.getElementById('trialCounter');
-
   if (trialCounter) {
     trialCounter.textContent = 'All tests complete';
   }
@@ -588,7 +584,6 @@ function finishTest() {
     try {
       await navigator.clipboard.writeText(tsv);
       copyResultsBtn.textContent = 'Copied!';
-
       setTimeout(() => {
         copyResultsBtn.textContent = 'Copy Results';
       }, 1200);
