@@ -7,6 +7,10 @@ const accuracyEl = document.getElementById('accuracy');
 const timeTakenEl = document.getElementById('timeTaken');
 const progressEl = document.getElementById('progress');
 
+// Make the canvas larger
+canvas.width = 1400;
+canvas.height = 700;
+
 let guide = [];
 let trace = [];
 let drawing = false;
@@ -25,7 +29,6 @@ const TRACE_LINE_WIDTH = 1;
 const CURSOR_RADIUS = 2;
 const START_DOT_RADIUS = 8;
 
-// Lower tolerance + multiplier = stricter scoring.
 const ACCURACY_TOLERANCE_PX = 12;
 const ACCURACY_PENALTY_MULTIPLIER = 1.5;
 const COVERAGE_THRESHOLD_PX = 6;
@@ -56,7 +59,7 @@ finalResults.style.marginTop = '20px';
 
 if (header) {
   header.innerHTML = `
-    <h1 id="trialCounter">Line 1/5</h1>
+    <h1 id="trialCounter">LCircle 1/5</h1>
     <p>The test will start when you start tracing.</p>
     <p>Take as long as you need. This is a measure of accuracy.</p>
   `;
@@ -69,40 +72,40 @@ if (app) {
 
 const SHAPES = [
   {
-    key: 'line',
-    label: 'Line',
+    key: 'LCircle',
+    label: 'LCircle',
     dotColor: '#f2c94c',
-    createGuide: createLineGuide
+    createGuide: () => createCircleGuide(220)
   },
   {
-    key: 'loop',
-    label: 'Loop',
-    dotColor: '#f2c94c',
-    createGuide: createLoopGuide
+    key: 'sCircle',
+    label: 'sCircle',
+    dotColor: '#ffb300',
+    createGuide: () => createCircleGuide(110)
   },
   {
-    key: 'boxy',
-    label: 'Boxy',
+    key: 'LSqaure',
+    label: 'LSqaure',
     dotColor: '#ff3333',
-    createGuide: createBoxyGuide
+    createGuide: () => createSquareGuide(360)
   },
   {
-    key: 'angular',
-    label: 'Angular',
+    key: 'sSquare',
+    label: 'sSquare',
+    dotColor: '#ff7777',
+    createGuide: () => createSquareGuide(200)
+  },
+  {
+    key: 'LTriangle',
+    label: 'LTriangle',
     dotColor: '#bb6bd9',
-    createGuide: createAngularGuide
+    createGuide: () => createTriangleGuide(430)
   },
   {
-    key: 'underloop',
-    label: 'Underloop',
+    key: 'LHexagon',
+    label: 'LHexagon',
     dotColor: '#0f52ba',
-    createGuide: createUnderloopGuide
-  },
-  {
-    key: 'wavy',
-    label: 'Wavy',
-    dotColor: '#00c853',
-    createGuide: createWavyGuide
+    createGuide: () => createHexagonGuide(220)
   }
 ];
 
@@ -141,7 +144,7 @@ function addLineSegment(points, x1, y1, x2, y2, steps = 40) {
   }
 }
 
-function addArc(points, cx, cy, r, startAngle, endAngle, steps = 60) {
+function addArc(points, cx, cy, r, startAngle, endAngle, steps = 120) {
   const startIndex = points.length ? 1 : 0;
 
   for (let i = startIndex; i <= steps; i++) {
@@ -154,134 +157,80 @@ function addArc(points, cx, cy, r, startAngle, endAngle, steps = 60) {
   }
 }
 
-function createLineGuide(pointsCount = 500) {
-  const y = canvas.height / 2;
-  const startX = 120;
-  const endX = canvas.width - 80;
-  const points = [];
+function addPolygon(points, vertices, stepsPerSide = 50) {
+  for (let i = 0; i < vertices.length; i++) {
+    const a = vertices[i];
+    const b = vertices[(i + 1) % vertices.length];
+    addLineSegment(points, a.x, a.y, b.x, b.y, stepsPerSide);
+  }
+}
 
-  for (let i = 0; i < pointsCount; i++) {
-    const t = i / (pointsCount - 1);
+function createCircleGuide(radius, pointCount = 500) {
+  const points = [];
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2 + 20;
+
+  for (let i = 0; i <= pointCount; i++) {
+    const t = i / pointCount;
+    const angle = -Math.PI / 2 + t * 2 * Math.PI;
+
     points.push({
-      x: startX + (endX - startX) * t,
-      y
+      x: cx + radius * Math.cos(angle),
+      y: cy + radius * Math.sin(angle)
     });
   }
 
   return points;
 }
 
-function createLoopGuide(pointsCount = 1000) {
+function createSquareGuide(size) {
   const points = [];
-  const loops = 5;
-  const startX = 120;
-  const endX = canvas.width - 80;
-  const totalWidth = endX - startX;
-  const centerY = canvas.height / 2 + 10;
-  const ampX = 46;
-  const ampY = 62;
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2 + 20;
+  const half = size / 2;
 
-  for (let i = 0; i < pointsCount; i++) {
-    const u = i / (pointsCount - 1);
-    const theta = -Math.PI / 2 + u * loops * 2 * Math.PI;
+  const vertices = [
+    { x: cx - half, y: cy - half },
+    { x: cx + half, y: cy - half },
+    { x: cx + half, y: cy + half },
+    { x: cx - half, y: cy + half }
+  ];
 
-    points.push({
-      x: startX + totalWidth * u + ampX * Math.sin(theta),
-      y: centerY - ampY * Math.cos(theta)
+  addPolygon(points, vertices, 70);
+  return points;
+}
+
+function createTriangleGuide(size) {
+  const points = [];
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2 + 25;
+  const height = size * Math.sqrt(3) / 2;
+
+  const vertices = [
+    { x: cx, y: cy - (2 / 3) * height },
+    { x: cx + size / 2, y: cy + (1 / 3) * height },
+    { x: cx - size / 2, y: cy + (1 / 3) * height }
+  ];
+
+  addPolygon(points, vertices, 80);
+  return points;
+}
+
+function createHexagonGuide(radius) {
+  const points = [];
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2 + 20;
+  const vertices = [];
+
+  for (let i = 0; i < 6; i++) {
+    const angle = -Math.PI / 2 + i * (2 * Math.PI / 6);
+    vertices.push({
+      x: cx + radius * Math.cos(angle),
+      y: cy + radius * Math.sin(angle)
     });
   }
 
-  return points;
-}
-
-function createBoxyGuide() {
-  const points = [];
-  const startX = 120;
-  const topY = canvas.height / 2 - 55;
-  const bottomY = canvas.height / 2 + 15;
-  const unit = 90;
-
-  let x = startX;
-  let y = bottomY;
-
-  addLineSegment(points, x, y, x, topY, 30);
-  y = topY;
-
-  for (let i = 0; i < 4; i++) {
-    addLineSegment(points, x, y, x + unit, y, 30);
-    x += unit;
-
-    addLineSegment(points, x, y, x, bottomY, 24);
-    y = bottomY;
-
-    addLineSegment(points, x, y, x + unit, y, 30);
-    x += unit;
-
-    addLineSegment(points, x, y, x, topY, 24);
-    y = topY;
-  }
-
-  addLineSegment(points, x, y, x + unit, y, 30);
-
-  return points;
-}
-
-function createAngularGuide() {
-  const points = [];
-  const startX = 120;
-  const midY = canvas.height / 2;
-  const topY = midY - 70;
-  const bottomY = midY + 70;
-  const stepX = 95;
-
-  let x = startX;
-  let y = topY;
-
-  for (let i = 0; i < 8; i++) {
-    const nextX = x + stepX;
-    const nextY = y === topY ? bottomY : topY;
-
-    addLineSegment(points, x, y, nextX, nextY, 28);
-    x = nextX;
-    y = nextY;
-  }
-
-  return points;
-}
-
-function createUnderloopGuide() {
-  const points = [];
-  const startX = 130;
-  const topY = canvas.height / 2 - 40;
-  const radius = 42;
-  const scallops = 5;
-  const diameter = radius * 2;
-
-  for (let i = 0; i < scallops; i++) {
-    const cx = startX + i * diameter + radius;
-    addArc(points, cx, topY, radius, Math.PI, 2 * Math.PI, 70);
-  }
-
-  return points;
-}
-
-function createWavyGuide(pointsCount = 700) {
-  const points = [];
-  const startX = 120;
-  const endX = canvas.width - 80;
-  const width = endX - startX;
-  const midY = canvas.height / 2 + 5;
-  const amplitude = 45;
-  const cycles = 2.5;
-
-  for (let i = 0; i < pointsCount; i++) {
-    const t = i / (pointsCount - 1);
-    points.push({
-      x: startX + width * t,
-      y: midY + amplitude * Math.sin(t * cycles * 2 * Math.PI + Math.PI)
-    });
-  }
-
+  addPolygon(points, vertices, 60);
   return points;
 }
 
@@ -554,7 +503,7 @@ function finishTest() {
   finalResults.innerHTML = `
     <h2>Results</h2>
     <p>Copy and paste this directly into Excel:</p>
-    <textarea id="resultsText" rows="20" style="width: 100%; box-sizing: border-box;" readonly>${tsv}</textarea>
+    <textarea id="resultsText" rows="24" style="width: 100%; box-sizing: border-box;" readonly>${tsv}</textarea>
     <div style="margin-top: 12px;">
       <button id="copyResultsBtn">Copy Results</button>
       <button id="restartTestBtn">Restart Test</button>
