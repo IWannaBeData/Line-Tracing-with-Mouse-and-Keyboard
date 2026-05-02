@@ -186,7 +186,15 @@ function createLoopGuide() {
     if (loop > 0) {
       const prevBottomX = startX + (loop - 1) * spacing + loopWidth / 2;
       const nextBottomX = cx;
-      addLineSegment(points, prevBottomX, centerY + loopHeight / 2, nextBottomX, centerY + loopHeight / 2, 25);
+
+      addLineSegment(
+        points,
+        prevBottomX,
+        centerY + loopHeight / 2,
+        nextBottomX,
+        centerY + loopHeight / 2,
+        25
+      );
     }
 
     const steps = 110;
@@ -205,7 +213,6 @@ function createLoopGuide() {
   }
 
   return points;
-}
 }
 
 function createBoxyGuide() {
