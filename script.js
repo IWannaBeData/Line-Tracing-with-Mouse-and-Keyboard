@@ -25,8 +25,10 @@ const TRACE_LINE_WIDTH = 1;
 const CURSOR_RADIUS = 2;
 const START_DOT_RADIUS = 8;
 
-const ACCURACY_TOLERANCE_PX = 18;
-const COVERAGE_THRESHOLD_PX = 8;
+// Lower tolerance + multiplier = stricter scoring.
+const ACCURACY_TOLERANCE_PX = 12;
+const ACCURACY_PENALTY_MULTIPLIER = 1.5;
+const COVERAGE_THRESHOLD_PX = 6;
 
 let currentShapeIndex = 0;
 let currentAttempt = 1;
@@ -169,24 +171,23 @@ function createLineGuide(pointsCount = 500) {
   return points;
 }
 
-function createLoopGuide(pointsCount = 900) {
+function createLoopGuide(pointsCount = 1000) {
   const points = [];
-  const startX = 140;
-  const baselineY = canvas.height / 2 + 20;
-  const totalWidth = canvas.width - 220;
   const loops = 5;
-  const tStart = -Math.PI / 2;
-  const tEnd = loops * 2 * Math.PI - Math.PI / 2;
-  const ampX = 26;
-  const ampY = 55;
+  const startX = 120;
+  const endX = canvas.width - 80;
+  const totalWidth = endX - startX;
+  const centerY = canvas.height / 2 + 10;
+  const ampX = 46;
+  const ampY = 62;
 
   for (let i = 0; i < pointsCount; i++) {
     const u = i / (pointsCount - 1);
-    const t = tStart + (tEnd - tStart) * u;
+    const theta = -Math.PI / 2 + u * loops * 2 * Math.PI;
 
     points.push({
-      x: startX + totalWidth * u + ampX * Math.sin(t),
-      y: baselineY - ampY * Math.cos(t)
+      x: startX + totalWidth * u + ampX * Math.sin(theta),
+      y: centerY - ampY * Math.cos(theta)
     });
   }
 
@@ -234,15 +235,15 @@ function createAngularGuide() {
   const stepX = 95;
 
   let x = startX;
-  let goingDown = true;
+  let y = topY;
 
   for (let i = 0; i < 8; i++) {
     const nextX = x + stepX;
-    const nextY = goingDown ? bottomY : topY;
+    const nextY = y === topY ? bottomY : topY;
 
-    addLineSegment(points, x, goingDown ? topY : bottomY, nextX, nextY, 28);
+    addLineSegment(points, x, y, nextX, nextY, 28);
     x = nextX;
-    goingDown = !goingDown;
+    y = nextY;
   }
 
   return points;
@@ -410,7 +411,9 @@ function calculateAccuracy() {
   const meanDist =
     trace.reduce((sum, p) => sum + nearestDistance(p, guide), 0) / trace.length;
 
-  return Math.max(0, 100 - (meanDist / ACCURACY_TOLERANCE_PX) * 100);
+  const adjustedError = meanDist * ACCURACY_PENALTY_MULTIPLIER;
+
+  return Math.max(0, 100 - (adjustedError / ACCURACY_TOLERANCE_PX) * 100);
 }
 
 function updateHiddenMetrics() {
@@ -506,9 +509,7 @@ function finishAttempt() {
   ) {
     const nextShape = SHAPES[currentShapeIndex + 1];
     trialStatus.textContent = `Next: ${nextShape.label} 1/${ATTEMPTS_PER_SHAPE}`;
-  } else if (
-    currentAttempt < ATTEMPTS_PER_SHAPE
-  ) {
+  } else if (currentAttempt < ATTEMPTS_PER_SHAPE) {
     trialStatus.textContent = `Next: ${shape.label} ${currentAttempt + 1}/${ATTEMPTS_PER_SHAPE}`;
   }
 
@@ -540,6 +541,7 @@ function finishTest() {
   queueRender();
 
   const trialCounter = document.getElementById('trialCounter');
+
   if (trialCounter) {
     trialCounter.textContent = 'All tests complete';
   }
@@ -567,6 +569,7 @@ function finishTest() {
     try {
       await navigator.clipboard.writeText(tsv);
       copyResultsBtn.textContent = 'Copied!';
+
       setTimeout(() => {
         copyResultsBtn.textContent = 'Copy Results';
       }, 1200);
